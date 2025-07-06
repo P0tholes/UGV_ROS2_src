@@ -63,6 +63,26 @@ def turret_state(turretState, laserState):
 def normaliseAsDegrees(value):
     return int((value / 255)*360)
 
+def avoid_value_down(input, value):
+    if (input == value):
+        return input - 1
+    else:
+        return input
+
+def clamp(value, min, max):
+    if (value > max):
+        return max
+    elif (value < min):
+        return min
+    else:
+        return value
+
+def degreesTo8bit(input):
+    return int(input*255/360)
+
+    
+gearing_multiplier = 1.5625
+    
 
 
 
@@ -71,11 +91,11 @@ app = Flask(__name__)
 
 @app.route('/control_robot', methods=['POST'])
 def command_robot():
-    print("I do b tryin")
+    #print("I do b tryin")
     data = request.get_json()
     if 'command' in data and len(data['command']) == 11:
         try:
-            print("commands received!")
+            #print("commands received!")
             # Extract several integers from the 'command' key
             global throttle
             global turn
@@ -112,38 +132,49 @@ def command_robot():
             pitchSlewRateData = Int32()
 
             # Use x, y, z to control the robot
-            print(slewRateYaw)
+            #print(slewRateYaw)
             
-            print(pitchSetpoint)
+            print("yaw setpoint 8 bit",avoid_value_down(degreesTo8bit(yawSetpoint),255))
+            print("pitch setpoint",pitchSetpoint)
             
-            print("trt st: " + str(turretState))
-            print("lsr st: " + str(laserState))
+            #print("trt st: " + str(turretState))
+            #print("lsr st: " + str(laserState))
 
-            yawSetpointForSlew = ((slewRateYaw-127)/1000.0) + previousYawSetpointForSlew
-            pitchSetpointForSlew = ((slewRatePitch-127)/1000.0) + previousPitchSetpointForSlew
+            yawSetpointForSlew = clamp(((slewRateYaw-127)/1000.0) + previousYawSetpointForSlew, 0.0, 255.0)
+            pitchSetpointForSlew = clamp(((slewRatePitch-127)/1000.0) + previousPitchSetpointForSlew, 0.0, 80.0)
             #dataChunk.data = [throttle + 127.0,turn + 127.0,0.0,0.0,0.0]
             throttleData.data = throttle + 127.0
             twistData.data = turn + 127.0
             turretStateData.data = turret_state(turretState, laserState)
             #print("Combined State: " + str(turret_state(turretState, laserState)))
             #laserStateData.data = laserState
+            '''
             if (yawSetpoint == previousYawSetpoint):
                 yawSetpointData.data = normaliseAsDegrees(int(yawSetpointForSlew))
                 previousYawSetpoint = yawSetpoint
                 previousYawSetpointForSlew = yawSetpointForSlew
+                print("yaw slew rate: " + str(slewRateYaw))
                 print("yaw setpoint for slew: " + str(yawSetpointForSlew))
+                print("delta yaw: " + str((slewRateYaw-127)/1000.0))
             else:
-                yawSetpointData.data = normaliseAsDegrees(yawSetpoint)
+                yawSetpointData.data = normaliseAsDegrees(clamp(yawSetpoint,0,255))
 
             if (pitchSetpoint == previousPitchSetpoint):
                 pitchSetpointData.data = normaliseAsDegrees(int(pitchSetpointForSlew))
                 previousPitchSetpoint = pitchSetpoint
                 previousPitchSetpointForSlew = pitchSetpointForSlew
+                print("pitch slew rate: " + str(slewRatePitch))
                 print("pitch setpoint for slew: " + str(pitchSetpointForSlew))
+                print("delta pitch: " + str((slewRatePitch-127)/1000.0))
             else:
-                pitchSetpointData.data = normaliseAsDegrees(pitchSetpoint)
-            #yawSetpointData.data = normaliseAsDegrees(yawSetpoint)
-            #pitchSetpointData.data = normaliseAsDegrees(pitchSetpoint)
+                pitchSetpointData.data = normaliseAsDegrees(clamp(pitchSetpoint,0,30))
+            '''
+            #yawSetpointData.data = normaliseAsDegrees(clamp(yawSetpoint,0,255))
+            #pitchSetpointData.data = normaliseAsDegrees(clamp(pitchSetpoint,0,90))
+            #print("YAW SP:" + str(yawSetpoint))
+            #print("PITCH SP:" + str(pitchSetpoint))
+            yawSetpointData.data = avoid_value_down(degreesTo8bit(yawSetpoint),255)
+            pitchSetpointData.data = pitchSetpoint
             lockModeData.data = lockMode
             cycleLockData.data = bool(cycleLock)
             yawSlewRateData.data = slewRateYaw

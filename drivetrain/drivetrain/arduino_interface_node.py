@@ -11,7 +11,7 @@ from std_msgs.msg import Float32
 from evdev import InputDevice, categorize, ecodes
 from std_msgs.msg import Float32MultiArray
 
-ser = Serial('/dev/ttyUSB0', 9600)
+ser = Serial('/dev/ttyUSB1', 9600)
 def send_motor_data(identifier, speed):
         data_to_send = f"{identifier} {speed}".encode()
         ser.write(data_to_send)

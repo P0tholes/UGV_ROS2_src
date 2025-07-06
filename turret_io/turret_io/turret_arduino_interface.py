@@ -12,7 +12,7 @@ from evdev import InputDevice, categorize, ecodes
 from std_msgs.msg import Float32MultiArray
 from std_msgs.msg._int32 import Int32
 
-ser = Serial('/dev/ttyUSB0', 9600)
+ser = Serial('/dev/ttyUSB0', 250000)
 def send_turret_data(identifier, value):
         data_to_send = f"{identifier} {value}".encode()
         ser.write(data_to_send)
@@ -29,24 +29,48 @@ start_of_message = 's'
 def write_characters(input_string):
     for char in input_string:
         ser.write(char.encode())
-        print((char.encode()).decode())
+        #print((char.encode()).decode())
+
+def write_serial_raw(state: int, yaw: int, pitch: int):
+     data = [255, state,pitch,yaw]
+     #data += state
+     #data += escape_byte(pitch)
+     #data += escape_byte(yaw)
+     ser.write(bytes(data))
+
+def escape_byte(byte):
+     if byte == 255:
+        return [254, 0]
+     elif byte == 254:
+        return [254, 1]
+     else:
+        return [byte]
 
 def write_to_serial(state, yaw, pitch):
-        dataString = b''
-        ser.write(b's')
-        write_characters(str(state))
-        print("state: " + str(state))
-        ser.write(b'd')
-        print(' ')
-        write_characters(str(yaw))
-        print("yaw: " + str(yaw))
-        ser.write(b'e')
-        print(' ')
+        #dataString = b''
+        #ser.write(b's')
+        message = "s"+str(state)+"d"+str(pitch).zfill(3)+"e"+str(yaw).zfill(3)+"z"
+        ser.write((message + '\n').encode())
+        #write_characters(str(state))
+        
+        #ser.write(b'd')
+        
+        #write_characters(str(yaw))
+        
+        #ser.write(b'e')
+        
 
-        write_characters(str(pitch))
-        print("pitch: " + str(pitch))
-        print(' ')
-        ser.write(b'z')
+        #write_characters(str(pitch))
+        
+        #ser.write(b'z')
+        
+      #  response = ser.readline().decode().strip()
+        #print("Arduino: ",response)
+       # print("Arduino: ",response)
+       # print("Arduino: ",response)
+        #print("\033c",end="")
+        #print("Commanded Yaw:",yaw)
+        
 
 
 
@@ -74,28 +98,28 @@ class ArduinoInterfaceNode(Node):
         time.sleep(2)
     
     def callback_turret_state(self, msg):
-        self.get_logger().info('I heard: "%s"' % msg.data)
+        #self.get_logger().info('I heard: "%s"' % msg.data)
         
         int_holder_array[0] = msg.data
         data_to_send = [0,0,0]
         data_to_send[0] = int_holder_array[0]
         data_to_send[1] = int_holder_array[1]
         data_to_send[2] = int_holder_array[2]
-        print("STATE CHANGE")
+        #print("STATE CHANGE")
         
         #data_to_send[4] = int(float_holder_array[4])
        
         
         #checksum = calculate_checksum(data_to_send)
         
-        write_to_serial(data_to_send[0],data_to_send[1],data_to_send[2])
-    
+        # OLD WORKING SLOW write_to_serial(data_to_send[0],data_to_send[1],data_to_send[2])
+        write_serial_raw(data_to_send[0],data_to_send[1],data_to_send[2])
 
 
     def callback_turret_pitch(self, msg):
-        self.get_logger().info('I heard: "%s"' % msg.data)
+        #self.get_logger().info('I heard: "%s"' % msg.data)
         
-        int_holder_array[1] = msg.data
+        int_holder_array[2] = msg.data
         data_to_send = [0,0,0]
         data_to_send[0] = int_holder_array[0]
         data_to_send[1] = int_holder_array[1]
@@ -111,7 +135,7 @@ class ArduinoInterfaceNode(Node):
     def callback_turret_yaw(self, msg):
         #self.get_logger().info('I heard: "%s"' % msg.data)
         
-        int_holder_array[2] = msg.data
+        int_holder_array[1] = msg.data
         data_to_send = [0,0,0,]
         data_to_send[0] = int_holder_array[0]
         data_to_send[1] = int_holder_array[1]
